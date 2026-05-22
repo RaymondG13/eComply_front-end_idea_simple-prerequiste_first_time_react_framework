@@ -1,380 +1,428 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import BottomNav from '../components/BottomNav';
+const R = {
+  business: "Mama Njeri's Kitchen",
+  location: "Westlands, Nairobi",
+  type: "Food kiosk",
+  owner: "Njeri Wambui",
+  reg: "BN/2021/04872",
+  phone: "+254 712 345 678",
+  permit: "Valid until Dec 2026",
+  score: 64,
+  verdict: "Needs improvement",
+  betterThan: 38,
+  violations: [
+    {
+      severity: "critical",
+      title: "Open drainage near food prep area",
+      law: "Public Health Act, Cap 242 — Section 115",
+      desc: "Wastewater channel runs adjacent to the food handling station with no cover.",
+      fix: "Install a sealed drainage cover and reroute greywater to the municipal line.",
+    },
+    {
+      severity: "warn",
+      title: "Waste not segregated at source",
+      law: "Sustainable Waste Management Act 2022 — Section 28",
+      desc: "Organic and inorganic waste collected in a single bin behind the kiosk.",
+      fix: "Provide colour-coded bins (green: organic, blue: recyclables, black: residual).",
+    },
+    {
+      severity: "warn",
+      title: "Wall surface absorbent / not washable",
+      law: "Food Hygiene Regulations 2020 — Reg 11(b)",
+      desc: "Untreated timber wall behind cooker absorbs grease and moisture.",
+      fix: "Tile or apply a smooth, impervious, washable finish to a height of 1.8m.",
+    },
+  ],
+  compliant: [
+    { title: "Handwashing station with soap & running water", law: "Food Hyg. Reg 8" },
+    { title: "Food stored 30cm off the ground on racks", law: "Cap 242 — Section 118" },
+  ],
+};
 
-const violations = [
-  {
-    severity: 'critical',
-    title: 'Open drainage near food prep area',
-    law: 'Public Health Act, Cap 242 — Section 115',
-    desc: 'Uncovered drainage within 1m of food surfaces creates direct contamination risk.',
-    fix: 'Seal all drainage channels with grated covers.'
-  },
-  {
-    severity: 'warning',
-    title: 'Waste not segregated at source',
-    law: 'Sustainable Waste Management Act, 2022 — Section 28',
-    desc: 'Mixed organic and non-organic waste in a single bin violates mandatory segregation law.',
-    fix: 'Provide separate labelled bins for each waste category.'
-  },
-  {
-    severity: 'warning',
-    title: 'Absorbent wall surface in cooking area',
-    law: 'Food Hygiene Regulations, 2020 — Regulation 11(b)',
-    desc: 'Porous walls behind cooking station harbour bacteria and cannot be properly sanitised.',
-    fix: 'Tile or apply non-absorbent paint to all cooking area walls.'
-  },
-];
+function scoreColor(n) {
+  return n >= 75 ? '#1D9E75' : n >= 50 ? '#BA7517' : '#E24B4A';
+}
 
-const compliant = [
-  { title: 'Handwashing station present', law: 'Food Hygiene Regulations, 2020 — Regulation 8' },
-  { title: 'Food stored off the ground', law: 'Public Health Act, Cap 242 — Section 118' },
-];
+function sevColor(s) {
+  return s === 'critical' ? '#E24B4A' : s === 'warn' ? '#BA7517' : '#1D9E75';
+}
+
+function sevBg(s) {
+  return s === 'critical' ? '#FCEBEB' : s === 'warn' ? '#FAEEDA' : '#E1F5EE';
+}
 
 function ScoreGauge({ score }) {
-  const canvasRef = useRef(null);
+  const [val, setVal] = useState(0);
+  const size = 180, stroke = 14;
+  const r = (size - stroke) / 2;
+  const cir = 2 * Math.PI * r;
+  const off = cir - (val / 100) * cir;
+  const col = scoreColor(score);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    const radius = 70;
-    let current = 0;
-
-    function getColor(s) {
-      if (s >= 75) return '#0F6E56';
-      if (s >= 50) return '#BA7517';
-      return '#E24B4A';
-    }
-
-    function draw(val) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Background ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, Math.PI * 0.75, Math.PI * 2.25);
-      ctx.strokeStyle = '#E1F5EE';
-      ctx.lineWidth = 14;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Score arc
-      const angle = Math.PI * 0.75 + (val / 100) * Math.PI * 1.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, Math.PI * 0.75, angle);
-      ctx.strokeStyle = getColor(val);
-      ctx.lineWidth = 14;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Score number
-      ctx.fillStyle = getColor(val);
-      ctx.font = 'bold 36px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(Math.round(val), cx, cy - 8);
-
-      // /100
-      ctx.fillStyle = '#9a9895';
-      ctx.font = '13px Inter, sans-serif';
-      ctx.fillText('/100', cx, cy + 22);
-    }
-
-    // Animate
-    const interval = setInterval(() => {
-      current += 1;
-      draw(current);
-      if (current >= score) clearInterval(interval);
+    let n = 0;
+    const id = setInterval(() => {
+      n += 2;
+      if (n >= score) { n = score; clearInterval(id); }
+      setVal(n);
     }, 18);
-
-    return () => clearInterval(interval);
+    return () => clearInterval(id);
   }, [score]);
 
-  return <canvas ref={canvasRef} width={180} height={180} />;
+  return (
+    <div style={{
+      margin: '-30px 20px 0', padding: 22,
+      background: '#fff', borderRadius: 24,
+      border: '1px solid var(--border)',
+      boxShadow: '0 24px 50px -22px rgba(15,110,86,0.3)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', position: 'relative', zIndex: 2
+    }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--border)" strokeWidth={stroke} fill="none" />
+          <circle
+            cx={size / 2} cy={size / 2} r={r}
+            stroke={col} strokeWidth={stroke}
+            fill="none" strokeLinecap="round"
+            strokeDasharray={cir} strokeDashoffset={off}
+            style={{ transition: 'stroke-dashoffset 0.1s' }}
+          />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{ fontSize: 48, fontWeight: 900, color: 'var(--text1)', letterSpacing: -2, lineHeight: 1 }}>{val}</div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>out of 100</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text2)' }}>
+        Compliance score · <span style={{ color: col, fontWeight: 700 }}>{R.verdict}</span>
+      </div>
+    </div>
+  );
 }
 
-function BellCurve({ score }) {
+function BellCurve({ score, betterThan }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
+    const cv = canvasRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    cv.width = cv.offsetWidth * 2;
+    cv.height = 120 * 2;
+    const w = cv.width, h = cv.height;
+    const mean = w / 2, sd = w / 6;
+    const f = x => Math.exp(-((x - mean) ** 2) / (2 * sd * sd));
+    const peak = f(mean);
 
-    function bell(x) {
-      const mean = 55, std = 18;
-      return Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
-    }
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#0F6E5660');
+    grad.addColorStop(1, '#0F6E5600');
 
-    const pts = [];
-    for (let i = 0; i <= 100; i++) {
-      pts.push({ x: (i / 100) * (w - 20) + 10, y: h - 10 - bell(i) * (h - 24) });
-    }
+    let p = 0;
+    const target = betterThan / 100;
 
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, h - 10);
-    pts.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(pts[pts.length - 1].x, h - 10);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(15,110,86,0.08)';
-    ctx.fill();
+    const tick = () => {
+      p += 0.02;
+      if (p > target) p = target;
+      ctx.clearRect(0, 0, w, h);
 
-    ctx.beginPath();
-    pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.strokeStyle = 'rgba(15,110,86,0.3)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 2) {
+        ctx.lineTo(x, h - (f(x) / peak) * (h - 30) - 10);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-    const sx = (score / 100) * (w - 20) + 10;
-    const sy = h - 10 - bell(score) * (h - 24);
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += 2) {
+        const y = h - (f(x) / peak) * (h - 30) - 10;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#0F6E56';
+      ctx.lineWidth = 4;
+      ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(sx, h - 10);
-    ctx.lineTo(sx, sy);
-    ctx.strokeStyle = 'var(--eco)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      const dx = p * w;
+      const dy = h - (f(dx) / peak) * (h - 30) - 10;
+      ctx.beginPath();
+      ctx.arc(dx, dy, 14, 0, Math.PI * 2);
+      ctx.fillStyle = scoreColor(score);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 6;
+      ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#0F6E56';
-    ctx.fill();
+      if (p < target) requestAnimationFrame(tick);
+    };
+    tick();
+  }, [score, betterThan]);
 
-    ctx.font = '500 10px sans-serif';
-    ctx.fillStyle = '#0F6E56';
-    ctx.textAlign = sx > w / 2 ? 'right' : 'left';
-    ctx.fillText('Better than 71%', sx + (sx > w / 2 ? -8 : 8), sy - 6);
-
-    ctx.font = '10px sans-serif';
-    ctx.fillStyle = '#9a9895';
-    ctx.textAlign = 'left';
-    ctx.fillText('0', 10, h - 1);
-    ctx.fillText('50', w / 2 - 6, h - 1);
-    ctx.textAlign = 'right';
-    ctx.fillText('100', w - 10, h - 1);
-  }, [score]);
-
-  return <canvas ref={canvasRef} width={200} height={70} style={{ width: '100%' }} />;
+  return (
+    <div style={{
+      margin: '16px 20px 0', padding: 16,
+      background: '#fff', borderRadius: 20,
+      border: '1px solid var(--border)'
+    }}>
+      <div style={{ fontSize: 12, color: 'var(--text2)' }}>You scored</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text1)', marginBottom: 8 }}>
+        Better than <span style={{ color: scoreColor(score) }}>{betterThan}%</span> of audited businesses
+      </div>
+      <canvas ref={canvasRef} style={{ width: '100%', height: 120 }} />
+    </div>
+  );
 }
+
+const HOTSPOTS = [
+  { x: 18, y: 64, sev: 'critical', label: 'Open drainage' },
+  { x: 70, y: 38, sev: 'warn', label: 'Absorbent wall' },
+  { x: 44, y: 78, sev: 'warn', label: 'Mixed waste' },
+  { x: 80, y: 70, sev: 'compliant', label: 'Handwash' },
+];
 
 function ReportPage() {
   const navigate = useNavigate();
-  const score = 64;
-  const [ownerOpen, setOwnerOpen] = useState(false);
-
-  function severityColor(s) {
-    return s === 'critical' ? 'var(--danger)' : 'var(--warn)';
-  }
-
-  function severityBg(s) {
-    return s === 'critical' ? 'var(--danger-light)' : 'var(--warn-light)';
-  }
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const initials = R.business.split(' ').map(w => w[0]).slice(0, 2).join('');
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--surface)', fontFamily: 'Inter, sans-serif', paddingBottom: 40 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--surface)', fontFamily: 'Inter, sans-serif', paddingBottom: 96 }}>
 
-      {/* Top bar */}
-      <div style={{ background: 'var(--eco)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => navigate('/dashboard')} style={{
-          background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
-          width: 32, height: 32, color: '#fff', fontSize: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>←</button>
-        <span style={{ fontSize: 15, fontWeight: 500, color: '#fff' }}>Audit report</span>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginLeft: 'auto' }}>3 May 2026</span>
-      </div>
-
-      {/* Hero score section */}
+      {/* Hero */}
       <div style={{
-        background: 'linear-gradient(160deg, #0F6E56, #083d32)',
-        padding: '20px 20px 28px'
+        position: 'relative', padding: '20px 20px 30px',
+        background: 'linear-gradient(160deg, var(--eco), var(--legal))',
+        color: '#fff', borderRadius: '0 0 28px 28px', overflow: 'hidden'
       }}>
-        {/* Profile row */}
+        <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #9FE1CB, #0F6E56)',
+          <button onClick={() => navigate('/dashboard')} style={{
+            width: 38, height: 38, borderRadius: 12,
+            background: 'rgba(255,255,255,0.18)', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, fontWeight: 600, color: '#fff',
-            border: '2px solid rgba(255,255,255,0.3)', flexShrink: 0
-          }}>MN</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>Mama Njeri's Kitchen</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>Westlands, Nairobi · Food kiosk</div>
-            <div style={{
-              display: 'inline-block', fontSize: 11, fontWeight: 500,
-              padding: '3px 10px', borderRadius: 20, marginTop: 4,
-              background: 'var(--warn-light)', color: '#633806'
-            }}>Needs improvement</div>
-          </div>
-          <button onClick={() => setOwnerOpen(!ownerOpen)} style={{
-            fontSize: 11, padding: '6px 12px',
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 20, color: '#fff', whiteSpace: 'nowrap'
-          }}>More details</button>
+            color: '#fff', fontSize: 18, backdropFilter: 'blur(10px)', cursor: 'pointer'
+          }}>←</button>
+          <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.9 }}>Audit report</div>
         </div>
-
-        {/* Score + curve */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 16, padding: '8px',
-            flexShrink: 0
-          }}>
-            <ScoreGauge score={score} />
+            width: 56, height: 56, borderRadius: 18,
+            background: 'rgba(255,255,255,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, fontSize: 18, backdropFilter: 'blur(10px)'
+          }}>{initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>{R.business}</div>
+            <div style={{ fontSize: 13, opacity: 0.85 }}>{R.location} · {R.type}</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>Performance vs others</div>
-            <BellCurve score={score} />
-          </div>
+          <div style={{
+            padding: '5px 10px', borderRadius: 999,
+            background: scoreColor(R.score), color: '#fff',
+            fontSize: 11, fontWeight: 800
+          }}>{R.verdict}</div>
         </div>
       </div>
 
-      <div style={{ padding: 16 }}>
+      {/* Score gauge */}
+      <ScoreGauge score={R.score} />
 
-        {/* Owner drawer */}
-        {ownerOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            style={{
-              background: '#fff', borderRadius: 14,
-              border: '1px solid var(--border)', padding: 16, marginBottom: 14
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+      {/* Bell curve */}
+      <BellCurve score={R.score} betterThan={R.betterThan} />
+
+      {/* More details accordion */}
+      <div style={{
+        margin: '14px 20px 0', borderRadius: 16,
+        background: '#fff', border: '1px solid var(--border)', overflow: 'hidden'
+      }}>
+        <button onClick={() => setDetailsOpen(!detailsOpen)} style={{
+          width: '100%', padding: '14px 16px',
+          background: 'transparent', border: 'none',
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', cursor: 'pointer',
+          fontSize: 14, fontWeight: 700, color: 'var(--text1)',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <span>More details</span>
+          <motion.span animate={{ rotate: detailsOpen ? 180 : 0 }}>▼</motion.span>
+        </button>
+        <AnimatePresence initial={false}>
+          {detailsOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ padding: '0 16px 16px', fontSize: 13 }}>
+                {[
+                  ['Owner', R.owner],
+                  ['Registration', R.reg],
+                  ['Phone', R.phone],
+                  ['Permit', R.permit],
+                ].map(([k, v], i) => (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', padding: '8px 0',
+                    borderTop: '1px solid var(--border)'
+                  }}>
+                    <span style={{ color: 'var(--text2)' }}>{k}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text1)' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Photo evidence */}
+      <div style={{ margin: '16px 20px 0' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text1)', margin: '0 0 12px' }}>Photo evidence</h3>
+        <div style={{
+          position: 'relative', borderRadius: 18, overflow: 'hidden',
+          aspectRatio: '4/3',
+          background: 'linear-gradient(135deg, #1a5c4a, #0a3d2e)',
+          boxShadow: '0 16px 40px -22px rgba(15,110,86,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <span style={{ fontSize: 64, opacity: 0.3 }}>🍽️</span>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.35) 100%)' }} />
+          {HOTSPOTS.map((h, i) => (
+            <motion.div
+              key={i}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+              style={{
+                position: 'absolute',
+                left: `${h.x}%`, top: `${h.y}%`,
+                transform: 'translate(-50%,-50%)'
+              }}
+            >
               <div style={{
-                width: 40, height: 40, borderRadius: '50%',
-                background: 'var(--legal-light)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, fontWeight: 600, color: 'var(--legal)'
-              }}>NW</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text1)' }}>Njeri Wambui</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)' }}>Business owner · Sole proprietor</div>
-              </div>
-            </div>
-            {[
-              ['Business reg.', 'BN/2021/04872'],
-              ['Phone', '+254 712 345 678'],
-              ['Operating since', 'March 2021'],
-              ['County permit', 'Nairobi — valid to Dec 2026'],
-              ['Previous audits', '2 (last score: 58)'],
-            ].map(([k, v], i) => (
-              <div key={i} style={{
-                display: 'flex', justifyContent: 'space-between',
-                fontSize: 12, padding: '8px 0',
-                borderBottom: i < 4 ? '1px solid var(--border)' : 'none'
-              }}>
-                <span style={{ color: 'var(--text2)' }}>{k}</span>
-                <span style={{ fontWeight: 500, color: 'var(--text1)' }}>{v}</span>
-              </div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* Photo evidence */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8 }}>Visual evidence</div>
-          <div style={{
-            borderRadius: 12, overflow: 'hidden',
-            border: '1px solid var(--border)', position: 'relative',
-            background: 'linear-gradient(135deg, #c8e8df, #a8d8cc)',
-            height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <div style={{ fontSize: 48 }}>🖼️</div>
-            {/* Hotspots */}
-            <div style={{ position: 'absolute', top: 20, left: 20, width: 60, height: 50, background: 'rgba(226,75,74,0.35)', borderRadius: 6, border: '2px solid rgba(226,75,74,0.6)' }} />
-            <div style={{ position: 'absolute', top: 22, left: 84, fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: 'rgba(226,75,74,0.9)', color: '#fff' }}>Drainage</div>
-            <div style={{ position: 'absolute', bottom: 30, right: 30, width: 70, height: 40, background: 'rgba(186,117,23,0.35)', borderRadius: 6, border: '2px solid rgba(186,117,23,0.6)' }} />
-            <div style={{ position: 'absolute', bottom: 32, right: 104, fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: 'rgba(186,117,23,0.9)', color: '#fff' }}>Waste bins</div>
-            <div style={{ position: 'absolute', top: 20, right: 20, width: 50, height: 40, background: 'rgba(15,110,86,0.35)', borderRadius: 6, border: '2px solid rgba(15,110,86,0.6)' }} />
-            <div style={{ position: 'absolute', top: 22, right: 74, fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 10, background: 'rgba(15,110,86,0.9)', color: '#fff' }}>Handwash ✓</div>
-            <div style={{ position: 'absolute', top: 10, right: 10 }}>
-              <span style={{ fontSize: 11, padding: '3px 10px', background: 'rgba(255,255,255,0.9)', borderRadius: 20, color: 'var(--eco)', fontWeight: 500 }}>3 areas flagged</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11, color: 'var(--text2)' }}>
-            <span>🔴 Critical</span>
-            <span>🟡 Warning</span>
-            <span>🟢 Compliant</span>
-          </div>
+                width: 28, height: 28, borderRadius: '50%',
+                background: sevColor(h.sev),
+                border: '3px solid #fff',
+                boxShadow: `0 0 0 3px ${sevColor(h.sev)}55, 0 6px 14px rgba(0,0,0,0.3)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 12, fontWeight: 800
+              }}>{i + 1}</div>
+            </motion.div>
+          ))}
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+          {[
+            { c: '#E24B4A', l: 'Critical' },
+            { c: '#BA7517', l: 'Warning' },
+            { c: '#1D9E75', l: 'Compliant' },
+          ].map(x => (
+            <span key={x.l} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text2)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: x.c }} /> {x.l}
+            </span>
+          ))}
+        </div>
+      </div>
 
-        {/* Violations */}
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10 }}>Violations ({violations.length})</div>
-        {violations.map((v, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            style={{
-              background: '#fff', borderRadius: 12,
-              border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 10
-            }}
-          >
-            <div style={{ padding: '12px 14px 10px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{
-                width: 10, height: 10, borderRadius: '50%',
-                background: severityColor(v.severity), flexShrink: 0, marginTop: 4
-              }} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', lineHeight: 1.4 }}>{v.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--legal)', marginTop: 2 }}>{v.law}</div>
+      {/* Violations */}
+      <div style={{ margin: '20px 20px 0' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text1)', margin: '0 0 12px' }}>
+          Violations <span style={{ color: '#E24B4A' }}>({R.violations.length})</span>
+        </h3>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {R.violations.map((v, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 * i }}
+              style={{
+                padding: 14, borderRadius: 16, background: '#fff',
+                border: `1px solid ${sevColor(v.severity)}33`,
+                borderLeft: `4px solid ${sevColor(v.severity)}`
+              }}
+            >
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 10,
+                  background: sevBg(v.severity), color: sevColor(v.severity),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontSize: 16
+                }}>{v.severity === 'critical' ? '🚨' : '⚠️'}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)' }}>{v.title}</div>
+                  <div style={{
+                    display: 'inline-block', marginTop: 4,
+                    padding: '3px 8px', borderRadius: 6,
+                    background: 'var(--legal-light)', color: 'var(--legal)',
+                    fontSize: 11, fontWeight: 700
+                  }}>{v.law}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8, lineHeight: 1.45 }}>{v.desc}</div>
+                  <div style={{
+                    marginTop: 8, padding: 10, borderRadius: 10,
+                    background: 'var(--eco-light)',
+                    fontSize: 12, color: 'var(--eco)', fontWeight: 600
+                  }}>💡 {v.fix}</div>
+                </div>
               </div>
-            </div>
-            <div style={{
-              padding: '8px 14px 12px', fontSize: 12,
-              color: 'var(--text2)', borderTop: '1px solid var(--border)', lineHeight: 1.6
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Compliant */}
+      <div style={{ margin: '20px 20px 0' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text1)', margin: '0 0 12px' }}>
+          Compliant areas <span style={{ color: '#1D9E75' }}>({R.compliant.length})</span>
+        </h3>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {R.compliant.map((c, i) => (
+            <div key={i} style={{
+              padding: 12, borderRadius: 14,
+              background: 'var(--eco-light)',
+              border: '1px solid var(--eco-mid)',
+              display: 'flex', gap: 10, alignItems: 'center'
             }}>
-              {v.desc}
-              <div style={{ fontSize: 12, color: 'var(--eco)', marginTop: 6, fontWeight: 500 }}>Fix: {v.fix}</div>
+              <span style={{ fontSize: 18 }}>✅</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{c.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--eco)' }}>{c.law}</div>
+              </div>
             </div>
-          </motion.div>
-        ))}
-
-        {/* Compliant */}
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10, marginTop: 4 }}>Compliant areas ({compliant.length})</div>
-        {compliant.map((c, i) => (
-          <div key={i} style={{
-            background: 'var(--eco-light)', border: '1px solid var(--eco-mid)',
-            borderRadius: 12, padding: '12px 14px',
-            display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10
-          }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--eco)', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#085041' }}>{c.title}</div>
-              <div style={{ fontSize: 11, color: 'var(--eco)' }}>{c.law}</div>
-            </div>
-          </div>
-        ))}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button style={{
-            flex: 1, padding: 12, background: 'var(--eco)',
-            border: 'none', borderRadius: 10, color: '#fff',
-            fontSize: 13, fontWeight: 600
-          }}>Export PDF</button>
-          <button style={{
-            flex: 1, padding: 12, background: 'transparent',
-            border: '1px solid var(--border)', borderRadius: 10,
-            color: 'var(--eco)', fontSize: 13, fontWeight: 600
-          }}>Share report</button>
-        </div>
-
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: 16, lineHeight: 1.5 }}>
-          eComply AI · Nairobi, Kenya · Not a substitute for legal counsel
+          ))}
         </div>
       </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 10, padding: '24px 20px 32px' }}>
+        <button style={{
+          flex: 1, display: 'inline-flex', alignItems: 'center',
+          justifyContent: 'center', gap: 8, padding: 14, borderRadius: 14,
+          background: 'linear-gradient(135deg, var(--eco), #1D9E75)',
+          color: '#fff', border: 'none', fontFamily: 'Inter, sans-serif',
+          fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          boxShadow: '0 14px 28px -12px rgba(15,110,86,0.5)'
+        }}>📄 Export PDF</button>
+        <button style={{
+          display: 'inline-flex', alignItems: 'center',
+          justifyContent: 'center', padding: '14px 18px', borderRadius: 14,
+          background: '#fff', color: 'var(--text1)',
+          border: '1px solid var(--border)', fontFamily: 'Inter, sans-serif',
+          fontWeight: 700, fontSize: 14, cursor: 'pointer'
+        }}>↗</button>
+      </div>
+
+<BottomNav />
     </div>
   );
 }
